@@ -1,0 +1,32 @@
+const MAX_PAPERS = 3 // Maximum number of papers
+const MAX_TONER = 4 // Maximum number of toner level
+set ACTIONS = {acquireTicketMachine, print, releaseTicketMachine, 
+			   acquireRefillPaper, refillPaper, releaseRefillPaper,
+			   acquireRefillToner, refillToner, releaseRefillToner}
+
+// Ticket Machine Process
+TICKET_MACHINE = TICKET_MACHINE[3][4], // Initialize with 3 tickets
+TICKET_MACHINE[i:0..MAX_PAPERS][j:0..MAX_TONER] = (
+	when(i > 0 && j > 0) acquireTicketMachine -> print -> releaseTicketMachine -> TICKET_MACHINE[i-1][j-1]
+	| when(i == 0) acquireRefillPaper -> refillPaper -> releaseRefillPaper -> TICKET_MACHINE[MAX_PAPERS][j]
+	| when(j == 0) acquireRefillToner -> refillToner -> releaseRefillToner -> TICKET_MACHINE[i][MAX_TONER]
+) + ACTIONS.
+
+// Passenger Process 
+PASSENGER(COUNT=MAX_PAPERS) = PASSENGER[COUNT],
+PASSENGER[i:0..COUNT] =  (
+	when(i > 0) acquireTicketMachine -> print -> releaseTicketMachine -> PASSENGER[i-1]
+	| when(i == 0) terminate -> END
+) + ACTIONS.
+
+// Ticket Technician Process
+TICKET_TECHNICIAN = (acquireRefillPaper -> refillPaper -> releaseRefillPaper -> TICKET_TECHNICIAN) + ACTIONS.
+
+// Toner Technician Process
+TONER_TECHNICIAN = (acquireRefillToner -> refillToner -> releaseRefillToner -> TONER_TECHNICIAN) + ACTIONS.
+
+// Purchase Ticket System
+||PURCHASE_TICKET_SYSTEM = (a:PASSENGER(3) || b:PASSENGER(2) 
+						|| pt:TICKET_TECHNICIAN || tt:TONER_TECHNICIAN
+						|| {a,b,pt,tt}::TICKET_MACHINE			 
+)/{terminate/{a.terminate, b.terminate, pt.terminate, tt.terminate}}.
